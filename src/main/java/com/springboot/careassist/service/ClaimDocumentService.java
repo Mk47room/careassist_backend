@@ -28,7 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -48,7 +50,6 @@ public class ClaimDocumentService {
     Logger logger = LoggerFactory.getLogger(ClaimDocument.class);
 
     private static final String uploadDir ="D:/documents/hexaware/FSD/capstone project/Project/frontend/careassist-ui/public/uploads/claimDocuments/";
-
     public void uploadDocument(String username, Long claimId,MultipartFile file, String docType) throws IOException {
 
         // Fetch claim
@@ -67,13 +68,21 @@ public class ClaimDocumentService {
             throw new InvalidCallException("Document type is required");
         }
 
-        String ext = Objects.requireNonNull(file.getOriginalFilename()).split("\\.")[1];
+        String ext = StringUtils.getFilenameExtension(file.getOriginalFilename());
         logger.info("File extension {}",  ext);
-        String originalFileName = System.currentTimeMillis() + "_" + file.getOriginalFilename() ;
+        String originalFileName = System.currentTimeMillis() + "_"
+                + Paths.get(Objects.requireNonNull(file.getOriginalFilename())).getFileName().toString();
 
+        Path baseDir = Paths.get(uploadDir).toAbsolutePath().normalize();
+        Path targetPath = baseDir.resolve(originalFileName).normalize();
+        if (!targetPath.startsWith(baseDir)) {
+            throw new SecurityException("Invalid file path");
+        }
+        Files.createDirectories(baseDir);
         // Save file
-        Files.copy(file.getInputStream() , Paths.get(uploadDir + originalFileName), StandardCopyOption.REPLACE_EXISTING);
-
+        try (InputStream in = file.getInputStream()) {
+            Files.copy(in, targetPath, StandardCopyOption.REPLACE_EXISTING);
+        }
         // Save document details in DB
         ClaimDocument document = new ClaimDocument();
         document.setFilePath(originalFileName);
