@@ -69,7 +69,8 @@ public class ClaimDocumentService {
         }
 
         String ext = StringUtils.getFilenameExtension(file.getOriginalFilename());
-        logger.info("File extension {}",  ext);
+        String safeExt = ext == null ? "none" : ext.replaceAll("[\\r\\n\\t]", "_");
+        logger.info("File extension {}", safeExt);
         String originalFileName = System.currentTimeMillis() + "_"
                 + Paths.get(Objects.requireNonNull(file.getOriginalFilename())).getFileName().toString();
 
